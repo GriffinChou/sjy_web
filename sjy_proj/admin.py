@@ -101,10 +101,11 @@ if admin.site.is_registered(User):
         fieldsets = (
             (None, {'fields': ('username', 'password')}),
                             (_('Personal info'), #个人信息
-                    {'fields': ('first_name', 'email', 'upper',
-                                'mobile', 'mark', 'last_name',
-                                'actived', 'avatar',
-                                'settings')}),
+                    {'fields': ('first_name', 'email',
+                                'mobile',
+                                'mark', 'last_name',
+                                # 'actived', 'avatar',
+                                )}),
                         (_('Permissions'), #权限
                     {'fields': ('is_active', 'is_staff', 'is_superuser',
                                 'groups', 'user_permissions')}),

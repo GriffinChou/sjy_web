@@ -139,7 +139,7 @@ AUTH_USER_MODEL = 'sjy_proj.User'
 
 
 
-# sjy_pro options
+# sjy_proj options
 
 SOFT_DELELE = False
 

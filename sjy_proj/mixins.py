@@ -59,15 +59,15 @@ class BaseRequiredMixin(LoginRequiredMixin):
                 self.get_login_url(), self.get_redirect_field_name()
             )
 
-        if not request.user.onidc:
-            idc = data_c.objects.filter(actived=True)
-            if idc.count() == 0 and request.user.is_superuser:
-                messages.info(
-                    request,
-                    "您必须新建一个数据中心才能使用该系统"
-                )
-                return HttpResponseRedirect('/welcome/')
-            return self.handle_no_permission()
+        # if not request.user.onidc:
+        #     idc = data_c.objects.filter(actived=True)
+        #     if idc.count() == 0 and request.user.is_superuser:
+        #         messages.info(
+        #             request,
+        #             "您必须新建一个数据中心才能使用该系统"
+        #         )
+        #         return HttpResponseRedirect('/welcome/')
+        #     return self.handle_no_permission()
         model = self.kwargs.get('model', self.cmodel)
         onidc = request.user.onidc
         self.onidc_id = onidc.id

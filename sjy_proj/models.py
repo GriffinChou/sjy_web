@@ -26,6 +26,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.views.generic.base import logger
 from django.urls import reverse_lazy
 
+
+
 #上传文件
 def upload_to(instance, filename):
     ext = filename.split('.')[-1]
@@ -334,16 +336,13 @@ class User(AbstractUser,Remark,Mark):
         ('sjy',"内部员工"),
         ('other',"非内部员工")
     )
-    user_name = models.CharField(max_length=128,unique=True)
-    password = models.CharField(max_length=256)
-    sex = models.CharField(max_length=128,choices=gender,default="女")
-    email = models.EmailField(unique=True)
-    phone = models.CharField(max_length=128,unique=True)
-#bug：当前创建的时间不对
-    c_time = models.DateTimeField(auto_now_add=True)
+    password = models.CharField(max_length=256,verbose_name='密码')
+    sex = models.CharField(max_length=128,choices=gender,default="男",verbose_name='性别')
+    email = models.EmailField(unique=True,verbose_name='邮箱')
+    # phone = models.CharField(max_length=128,verbose_name='电话')
 
-    user_role = models.CharField(max_length=128,choices=role,default="非内部员工")
-    user_image = models.ImageField(max_length=256,default='../static/imgs/sjy.jpg')#默认头像
+    # user_role = models.CharField(max_length=128,choices=role,default="非内部员工")
+    user_image = models.ImageField(max_length=256,default='../static/imgs/sjy.jpg',verbose_name='头像')#默认头像
 
     #设置外键关系，外键写在多数的一方，用户和角色：多对一
     # role = models.ForeignKey(role,on_delete=models.CASCADE)#设置级联删除
@@ -351,12 +350,12 @@ class User(AbstractUser,Remark,Mark):
 
 
 #人性化显示对象信息
-    def __str__(self):
-        return self.user_name
+    # def __str__(self):
+    #     return self.Meta
 
 #用户按创建时间反序排列
     class Meta:
-        ordering = ["-c_time"]
+        # ordering = ["-c_time"]
         verbose_name = "用户"
         verbose_name_plural = "用户"
 
@@ -644,4 +643,256 @@ class deparment(Mark, PersonTime, ActiveDelete, Remark):
         default_permissions = ('view', 'add', 'change', 'delete', 'exports')
         ordering = ['-actived', '-modified']
         verbose_name = verbose_name_plural = "部门管理"
+
+#
+class Onidc(models.Model):
+    onidc = models.ForeignKey(
+        'data_c',
+        blank=True, null=True, on_delete=models.PROTECT,
+        related_name="%(app_label)s_%(class)s_onidc",
+        verbose_name="所属项目", help_text="该数据所属的项目"
+    )
+
+
+#日志
+class Syslog(Contentable):
+    action_flag = models.CharField(_('action flag'), max_length=32)
+    message = models.TextField(_('change message'), blank=True)
+    object_desc = models.CharField(
+        max_length=128,
+        verbose_name="对象描述"
+    )
+    related_client = models.CharField(
+        max_length=128,
+        blank=True, null=True,
+        verbose_name="关系客户"
+    )
+
+    def title_description(self):
+        time = formats.localize(timezone.template_localtime(self.created))
+        text = '{} > {} > {}了 > {}'.format(
+            time, self.creator, self.action_flag, self.content_type
+        )
+        return text
+
+    class Meta(Mark.Meta):
+        icon = 'fa fa-history'
+        list_display = [
+            'created', 'creator', 'action_flag', 'content_type',
+            'object_desc', 'related_client', 'message', 'actived',
+        ]
+        default_permissions = ('view', 'add', 'change', 'delete', 'exports')
+        ordering = ['-created', ]
+        verbose_name = verbose_name_plural = _('log entries')
+
+
+
+'''
+6.创建POS元数据表，包含路径和列表对象，
+关联工程id
+'''
+#pos处理device------>pos
+@python_2_unicode_compatible
+class POS(Onidc, Mark, PersonTime, ActiveDelete, Remark):
+    name = models.SlugField(
+        max_length=32,
+        unique=True,
+        verbose_name="编号",
+        help_text="默认最新一个可用编号")
+    rack = models.ForeignKey(
+        'Rack',
+        on_delete=models.PROTECT,
+        related_name="%(app_label)s_%(class)s_rack",
+        verbose_name="所属项目",
+        help_text="该pos所属的项目信息")
+    units = models.ManyToManyField(
+        'Unit',
+        blank=True,
+        verbose_name="设备U位",
+        help_text="设备所在机柜中的U位信息")
+    client = models.ForeignKey(
+        'Client',
+        on_delete=models.PROTECT,
+        related_name="%(app_label)s_%(class)s_client",
+        verbose_name="所属工程",
+        help_text="该pos所属的工程信息")
+    # ipaddr = models.Field(
+    ipaddr = models.FileField(
+        max_length=128,
+        blank=False,
+        verbose_name="pos地址",
+        help_text="比如: C:/datasets/超图pos.txt")
+    # model = models.CharField(
+    model = models.FileField(
+        max_length=128,
+        verbose_name="照片地址", help_text="比如: C:/超图/A/")
+    style = models.ForeignKey(
+        'Option',
+        on_delete=models.PROTECT,
+        limit_choices_to={'flag': 'Device-Style'},
+        related_name="%(app_label)s_%(class)s_style",
+        verbose_name="设备类型", help_text="设备类型默认为服务器")
+
+    tags = models.ManyToManyField(
+        'Option',
+        blank=True, limit_choices_to={'flag': 'Device-Tags'},
+        related_name="%(app_label)s_%(class)s_tags",
+        verbose_name="设备标签",
+        help_text="可拥有多个标签,字段数据来自机房选项"
+    )
+
+    def __str__(self):
+        return self.name
+
+    def title_description(self):
+        text = '{} > {} > {}'.format(
+            self.client, self.get_status_display(), self.style
+        )
+        return text
+
+    def list_units(self):
+        value = [force_text(i) for i in self.units.all().order_by('name')]
+        if len(value) > 1:
+            value = [value[0], value[-1]]
+        units = "-".join(value)
+        return units
+
+    @property
+    def move_history(self):
+        ct = ContentType.objects.get_for_model(self, for_concrete_model=True)
+        logs = Syslog.objects.filter(
+            content_type=ct, object_id=self.pk,
+            actived=True, deleted=False, action_flag="修改",
+        ).filter(content__contains='"units"')
+        history = []
+        for log in logs:
+            data = json.loads(log.content)
+            lus = data.get('units')[0]
+            try:
+                swap = {}
+                swap['id'] = log.pk
+                swap['created'] = log.created
+                swap['creator'] = log.creator
+                ous = Unit.objects.filter(pk__in=lus)
+                value = [force_text(i) for i in ous]
+                if len(value) > 1:
+                    value = [value[0], value[-1]]
+                swap['units'] = "-".join(value)
+                swap['rack'] = ous.first().rack
+                move_type = "跨机柜迁移" if 'rack' in data else "本机柜迁移"
+                swap['type'] = move_type
+                history.append(swap)
+            except Exception as e:
+                logger.warning(
+                    'rebuliding device history warning: {}'.format(e))
+        return history
+
+    def last_rack(self):
+        try:
+            return self.move_history[0].get('rack')
+        except Exception as e:
+            logger.warning('Get device last rack warning: {}'.format(e))
+
+    def save(self, *args, **kwargs):
+        if not self.pk and not self.sn:
+            cls = ContentType.objects.get_for_model(self)
+            cls_id = "%02d" % (cls.id)
+            try:
+                object_id = \
+                    cls.model_class().objects.order_by('pk').last().pk + 1
+            except Exception:
+                object_id = 1
+            object_id = "%02d" % (object_id)
+            self.sn = str(
+                timezone.datetime.now().strftime('%Y%m%d') + cls_id + object_id
+            )
+        return super(pos, self).save(*args, **kwargs)
+
+    class Meta(Mark.Meta):
+        level = 3
+        icon = 'fa fa-server'
+        metric = "台"
+        list_display = [
+            'name', 'rack', 'urange', 'client', 'model', 'style',
+            'sn', 'ipaddr', 'status', 'actived', 'modified'
+        ]
+        default_permissions = ('view', 'add', 'change', 'delete', 'exports')
+        ordering = ['-modified']
+        unique_together = (('onidc', 'name',),)
+        verbose_name = verbose_name_plural = "模型生产"
+
+
+@python_2_unicode_compatible
+class Unit(
+    Onidc, Mark, PersonTime, ActiveDelete,
+):
+    name = models.SlugField(
+        max_length=3, verbose_name="姓名",
+        help_text="必须是数字字符串,例如：01, 46, 47"
+    )
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def online(self):
+        online = self.device_set.filter(actived=True, deleted=False)
+        if online.exists():
+            return online.first()
+        else:
+            return False
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            try:
+                self.name = "%02d" % (int(self.name))
+            except Exception:
+                raise ValidationError("必须是数字字符串,例如：01, 46, 47")
+        else:
+            if not self.online and not self.actived:
+                return
+            if self.online and self.actived:
+                return
+        return super(Unit, self).save(*args, **kwargs)
+
+    def clean(self):
+        if not self.pk:
+            try:
+                int(self.name)
+            except Exception:
+                raise ValidationError("必须是数字字符串,例如：01, 46, 47")
+        else:
+            if not self.online and not self.actived:
+                raise ValidationError('该U位没有在线设备, 状态不能为`True`')
+            if self.online and self.actived:
+                raise ValidationError('该U位已有在线设备，状态不能为`False`')
+
+    @property
+    def repeat(self):
+        name = self.name
+        last_name = "%02d" % (int(name) + 1)
+        try:
+            last = Unit.objects.get(rack=self.rack, name=last_name)
+        except Exception:
+            last = None
+        if last:
+            if (last.actived == self.actived) and (last.online == self.online):
+                return True
+        else:
+            return False
+
+    class Meta(Mark.Meta):
+        level = 0
+        icon = 'fa fa-magnet'
+        metric = "个"
+        list_display = [
+            'name',
+            'rack',
+            'client',
+            'actived',
+            'modified',
+            'operator']
+        default_permissions = ('view', 'add', 'change', 'delete', 'exports')
+        unique_together = (('rack', 'name'),)
+        verbose_name = verbose_name_plural = "通讯录"
 
