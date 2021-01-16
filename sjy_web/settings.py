@@ -25,7 +25,7 @@ SECRET_KEY = 'ww*dhqbh@nmq+z377zmm-e4aq5d%bcwf%fps4yc$(jg5m33@k3'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'sjy_proj.apps.SjyProjConfig',
+    'sjy_proj',
 ]
 
 MIDDLEWARE = [
@@ -78,8 +78,7 @@ WSGI_APPLICATION = 'sjy_web.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        # 'NAME': BASE_DIR / 'db.sqlite3',
-        'NAME': 'test1',
+        'NAME': 'sjy_web',
         'USER': 'root',
         'PASSWORD': 'sjyroot',
         'HOST': 'localhost',
@@ -136,7 +135,7 @@ MEDIA_URL = '/media/'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-AUTH_USER_MODEL = 'sjy_pro.User'
+AUTH_USER_MODEL = 'sjy_proj.User'
 
 
 
