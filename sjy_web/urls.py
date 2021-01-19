@@ -19,7 +19,7 @@ from sjy_proj import views
 from django.conf import settings
 from django.conf.urls import url, include, static
 # from sjy_proj.list import ListModelView, ConfigUserListView
-# from sjy_proj.detail import DetailModelView
+from sjy_proj.detail import DetailModelView
 # from sjy_proj.edit import NewModelView, EditModelView
 
 app_name = 'sjy_proj'
@@ -53,7 +53,7 @@ urlpatterns = [
     url(r'^$', views.IndexView.as_view(), name='index'),
     url(r'^accounts/', include(accounts_urls)),
     url(r'^welcome/', views.welcome, name='welcome'),
-    url(r'^switch_onidc/', views.switch_onidc, name='switch_onidc'),
+    # url(r'^switch_onidc/', views.switch_onidc, name='switch_onidc'),
     # url(r'^list/zonemap/', views.ZonemapView.as_view(), name='zonemap'),
     # url(r'^(?:new/(?P<model>\w+))/$', NewModelView.as_view(), name='new'),
     # url(r'^(?:list/(?P<model>\w+))/$', ListModelView.as_view(), name='list'),
@@ -61,8 +61,8 @@ urlpatterns = [
     #     ConfigUserListView.as_view(), name='config'),
     # url(r'^(?:config/list/(?P<model>\w+))/$',
     #     ConfigUserListView.as_view(), name='config_list'),
-    # url(r'^(?:detail/(?:(?P<model>\w+)-(?P<pk>\d+)))/$',
-    #     DetailModelView.as_view(), name='detail'),
+    url(r'^(?:detail/(?:(?P<model>\w+)-(?P<pk>\d+)))/$',
+        DetailModelView.as_view(), name='detail'),
     # url(r'^(?:update/(?:(?P<model>\w+)-(?P<pk>\d+)))/$',
     #     EditModelView.as_view(), name='update'),
     # url(r'^upload/$',

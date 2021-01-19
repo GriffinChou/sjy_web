@@ -99,28 +99,22 @@ if admin.site.is_registered(User):
     @admin.register(User)
     class UserAdmin(UserAdmin):
         fieldsets = (
-            (None, {'fields': ('username', 'password')}),
-                            (_('Personal info'), #个人信息
-                    {'fields': ('first_name', 'email',
-                                'mobile',
-                                'mark', 'last_name',
+            (None, {'fields': ('username', 'password')}),(_('Personal info'), #个人信息
+                    {'fields': ('first_name', 'email','mobile','mark', 'last_name',
                                 # 'actived', 'avatar',
                                 )}),
                         (_('Permissions'), #权限
-                    {'fields': ('is_active', 'is_staff', 'is_superuser',
-                                'groups', 'user_permissions')}),
+                    {'fields': ('is_active', 'is_staff', 'is_superuser','groups', 'user_permissions')}),
                          (_('Important dates'), #登录和注册日期
-             {'fields': ('last_login', 'date_joined')}),
+                    {'fields': ('last_login', 'date_joined')}),
         )
         add_fieldsets = (
             (None, {
                 'classes': ('wide',),
-                'fields': ('username', 'password1', 'password2',
-                            'first_name', 'email',
+                'fields': ('username', 'password1', 'password2','first_name', 'email',
                 ), }), )
 
         filter_horizontal = ('groups', 'user_permissions',)
-
 
 if not admin.site.is_registered(Group):
     # admin.site.unregister(Group)

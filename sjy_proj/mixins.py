@@ -102,3 +102,24 @@ class BaseRequiredMixin(LoginRequiredMixin):
             construct_menus(self.request.user), 1800
         )
         return context
+
+
+
+
+class PostRedirect(object):
+
+    def get_success_url(self):
+        if '_addanother' in self.request.POST:
+            url = reverse_lazy('idcops:new', kwargs={'model': self.model_name})
+            params = get_query_string(self.request.GET.copy())
+            success_url = force_text(url + params)
+        elif '_saverview' in self.request.POST:
+            kwargs = {'model': self.model_name, 'pk': self.object.pk}
+            success_url = reverse_lazy('idcops:detail', kwargs=kwargs)
+        elif '_last' in self.request.POST:
+            referrer = self.request.META.get('HTTP_REFERER', None)
+            success_url = referrer
+        else:
+            kwargs = {'model': self.model_name}
+            success_url = reverse_lazy('idcops:list', kwargs=kwargs)
+        return success_url

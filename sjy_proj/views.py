@@ -33,7 +33,7 @@ from django.urls import reverse_lazy
 from sjy_proj.mixins import BaseRequiredMixin
 #导入模型中创建的table模块
 from sjy_proj.models import (
-    data_c,Syslog,
+    data_c, Syslog, POS, deparment,up_pos,
     program,  ContentType,  Attachment
 )
 
@@ -148,7 +148,7 @@ class IndexView(BaseRequiredMixin, TemplateView):
         return ranges
 
     def make_device_dynamic_change(self):
-        content_type = ContentType.objects.get_for_model(Device)
+        content_type = ContentType.objects.get_for_model(POS)
         logs = Syslog.objects.filter(
             onidc_id=self.onidc_id, content_type=content_type)
         data = {}
@@ -171,7 +171,7 @@ class IndexView(BaseRequiredMixin, TemplateView):
         return data
 
     def make_rack_dynamic_change(self):
-        content_type = ContentType.objects.get_for_model(Rack)
+        content_type = ContentType.objects.get_for_model(deparment)
         logs = Syslog.objects.filter(
             onidc_id=self.onidc_id, content_type=content_type)
         data = {}
@@ -187,8 +187,8 @@ class IndexView(BaseRequiredMixin, TemplateView):
 
     def make_rack_statistics(self):
         data = []
-        robjects = Rack.objects.filter(onidc_id=self.onidc_id, actived=True)
-        keys = Option.objects.filter(
+        robjects = deparment.objects.filter(onidc_id=self.onidc_id, actived=True)
+        keys = program.objects.filter(
             flag__in=['Rack-Style', 'Rack-Status'],
             actived=True)
         keys = shared_queryset(keys, self.onidc_id)
@@ -207,8 +207,8 @@ class IndexView(BaseRequiredMixin, TemplateView):
 
     def make_online_statistics(self):
         data = []
-        dobjects = Online.objects.filter(onidc_id=self.onidc_id)
-        keys = Option.objects.filter(flag__in=['Device-Style', 'Device-Tags'])
+        dobjects = up_pos.objects.filter(onidc_id=self.onidc_id)
+        keys = program.objects.filter(flag__in=['Device-Style', 'Device-Tags'])
         keys = shared_queryset(keys, self.onidc_id)
         for k in keys:
             d = []

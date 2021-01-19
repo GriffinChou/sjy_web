@@ -6,7 +6,6 @@ import uuid
 import json
 import socket
 import struct
-import ipaddress
 from django.db import models, transaction
 from django.db.models.fields import BLANK_CHOICE_DASH
 from django.conf import settings
@@ -19,7 +18,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import formats, timezone
-from django.utils.encoding import  force_text
+from django.utils.encoding import force_text
 from six import python_2_unicode_compatible
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
@@ -65,11 +64,11 @@ COLOR_MAPS = (
 )
 
 #项目状态
-state = (('0','未开始'),
-         ('1','照片元数据提取'),
-         ('2','pos处理'),
-         ('3','pos写入'),
-         ('4','已完成'),)
+# state = (('0','未开始'),
+#          ('1','照片元数据提取'),
+#          ('2','pos处理'),
+#          ('3','pos写入'),
+#          ('4','已完成'),)
 
 #其他标记
 class Mark(models.Model):
@@ -110,101 +109,6 @@ class Mark(models.Model):
 
     def title_description(self):
         return self.__str__()
-
-
-'''
-3.创建项目表，包含项目名称、客户名称、项目状态、创建人、项目描述和创建时间等
-option -------program
-'''
-@python_2_unicode_compatible
-class program():
-    p_name = models.CharField(
-        max_length=64,
-        verbose_name="项目名称",
-        help_text="自定义该项目的名称")
-
-    flag = models.SlugField(
-        max_length=64,
-        choices=BLANK_CHOICE_DASH,
-        verbose_name="标记类型",
-        help_text="创建项目，请选择“所属项目”")
-
-    description = models.CharField(
-        max_length=128,
-        blank=True,
-        verbose_name="项目描述",
-        help_text="可以填写项目背景等内容")
-
-    color = models.SlugField(
-        max_length=12,
-        choices=COLOR_MAPS,
-        null=True, blank=True,
-        verbose_name="状态",
-        help_text="状态标签，用于显示当前项目进行到哪一步")
-
-    def __init__(self, *args, **kwargs):
-        super(program, self).__init__(*args, **kwargs)
-        flag = self._meta.get_field('flag')
-        flag.choices = self.choices_to_field()
-
-    @classmethod
-    def choices_to_field(cls):
-        _choices = [BLANK_CHOICE_DASH[0], ]
-        for rel in cls._meta.related_objects:
-            object_name = rel.related_model._meta.object_name.capitalize()
-            field_name = rel.remote_field.name.capitalize()
-            name = "{}-{}".format(object_name, field_name)
-            remote_model_name = rel.related_model._meta.verbose_name
-            verbose_name = "{}-{}".format(
-                remote_model_name, rel.remote_field.verbose_name
-            )
-            _choices.append((name, verbose_name))
-        return sorted(_choices)
-
-    @property
-    def flag_to_dict(self):
-        maps = {}
-        for item in self.choices_to_field():
-            maps[item[0]] = item[1]
-        return maps
-
-    def clean_fields(self, exclude=None):
-        super(program, self).clean_fields(exclude=exclude)
-        if not self.pk:
-            verify = self._meta.model.objects.filter(
-                onidc=self.onidc, master=self.master, flag=self.flag)
-            if self.master and verify.exists():
-                raise ValidationError({
-                    'text': "标记类型: {} ,机房已经存在一个默认使用的标签: {}"
-                            " ({}).".format(self.flag_to_dict.get(self.flag),
-                                            self.text, self.description)})
-
-    def __str__(self):
-        return self.text
-
-    def title_description(self):
-        text = '{} > {}'.format(self.get_flag_display(), self.text)
-        return text
-
-    def save(self, *args, **kwargs):
-        shared_flag = ['clientkf', 'clientsales', 'goodsbrand', 'goodsunit']
-        if self.flag in shared_flag:
-            self.mark = 'shared'
-        return super(program, self).save(*args, **kwargs)
-
-    class Meta(Mark.Meta):
-        level = 2
-        icon = 'fa fa-cogs'
-        metric = "项"
-        list_display = [
-            'text', 'flag', 'description', 'master',
-            'color',
-            'actived', 'onidc', 'mark'
-        ]
-        default_permissions = ('view', 'add', 'change', 'delete', 'exports')
-        ordering = ['-actived', '-modified']
-        unique_together = (('flag', 'text'),)
-        verbose_name = verbose_name_plural = "项目管理"
 
 #标记
 class Remark(models.Model):
@@ -302,7 +206,7 @@ class Contentable(Mark, PersonTime, ActiveDelete):
         null=True,
         verbose_name=_('content type'),
         related_name="%(app_label)s_%(class)s_content_type",
-        limit_choices_to={'app_label': 'idcops'}
+        limit_choices_to={'app_label': 'sjy_proj'}
     )
     object_id = models.PositiveIntegerField(
         _('object id'), blank=True, null=True)
@@ -414,22 +318,6 @@ class pic_details(models.Model):
 
 
 
-'''
-6.创建POS元数据表，包含路径和列表对象，
-关联工程id
-'''
-class pos(models.Model):
-    pos_path = models.CharField(max_length=256)
-    pos = models.CharField(max_length=256)
-
-    def __str__(self):
-        return self.pos_path
-
-    class Meta:
-        verbose_name = "pos元数据"
-        verbose_name_plural = "pos元数据"
-
-
 
 '''
 7.创建统计表，包含文件数量、文件夹数量、需求容量、pos范围以及pos文件中的pos行数、列数、范围等字段，
@@ -473,19 +361,6 @@ class abmormal_datas(models.Model):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 #上传的文件附件Attachment
 @python_2_unicode_compatible
 class Attachment():
@@ -518,7 +393,6 @@ class Attachment():
 
 
 
-#
 class Contentable():
     content_type = models.ForeignKey(
         ContentType,
@@ -635,7 +509,7 @@ class deparment(Mark, PersonTime, ActiveDelete, Remark):
         icon_color = 'aqua'
         metric = "个"
         dashboard = True
-        default_filters = {'deleted': False, 'actived': True}
+        # default_filters = {'deleted': False, 'actived': True}
         list_display = [
             'name', 'unitc',  'tags',
         ]
@@ -688,7 +562,8 @@ class Syslog(Contentable):
 
 
 '''
-6.创建POS元数据表，包含路径和列表对象，
+6.创建POS数据表，包含路径和列表对象，
+pos文件包含经纬度、高程、pos文件名，所属工程名等
 关联工程id
 '''
 #pos处理device------>pos
@@ -700,16 +575,11 @@ class POS(Onidc, Mark, PersonTime, ActiveDelete, Remark):
         verbose_name="编号",
         help_text="默认最新一个可用编号")
     rack = models.ForeignKey(
-        'Rack',
+        'deparment',
         on_delete=models.PROTECT,
         related_name="%(app_label)s_%(class)s_rack",
         verbose_name="所属项目",
         help_text="该pos所属的项目信息")
-    units = models.ManyToManyField(
-        'Unit',
-        blank=True,
-        verbose_name="设备U位",
-        help_text="设备所在机柜中的U位信息")
     client = models.ForeignKey(
         'Client',
         on_delete=models.PROTECT,
@@ -717,6 +587,7 @@ class POS(Onidc, Mark, PersonTime, ActiveDelete, Remark):
         verbose_name="所属工程",
         help_text="该pos所属的工程信息")
     # ipaddr = models.Field(
+    #上传pos文件
     ipaddr = models.FileField(
         max_length=128,
         blank=False,
@@ -727,7 +598,7 @@ class POS(Onidc, Mark, PersonTime, ActiveDelete, Remark):
         max_length=128,
         verbose_name="照片地址", help_text="比如: C:/超图/A/")
     style = models.ForeignKey(
-        'Option',
+        'program',
         on_delete=models.PROTECT,
         limit_choices_to={'flag': 'Device-Style'},
         related_name="%(app_label)s_%(class)s_style",
@@ -806,7 +677,7 @@ class POS(Onidc, Mark, PersonTime, ActiveDelete, Remark):
             self.sn = str(
                 timezone.datetime.now().strftime('%Y%m%d') + cls_id + object_id
             )
-        return super(pos, self).save(*args, **kwargs)
+        return super(POS, self).save(*args, **kwargs)
 
     class Meta(Mark.Meta):
         level = 3
@@ -895,4 +766,132 @@ class Unit(
         default_permissions = ('view', 'add', 'change', 'delete', 'exports')
         unique_together = (('rack', 'name'),)
         verbose_name = verbose_name_plural = "通讯录"
+
+
+
+'''
+3.创建项目表，包含项目名称、客户名称、项目状态、创建人、项目描述和创建时间等
+option -------program
+'''
+@python_2_unicode_compatible
+class program(Onidc,Mark, PersonTime, ActiveDelete, Remark):
+    p_name = models.CharField(
+        max_length=64,
+        verbose_name="项目名称",
+        help_text="自定义该项目的名称")
+
+    flag = models.SlugField(
+        max_length=64,
+        choices=BLANK_CHOICE_DASH,
+        verbose_name="标记类型",
+        help_text="创建项目，请选择“所属项目”")
+
+    description = models.CharField(
+        max_length=128,
+        blank=True,
+        verbose_name="项目描述",
+        help_text="可以填写项目背景等内容")
+
+    color = models.SlugField(
+        max_length=12,
+        choices=COLOR_MAPS,
+        null=True, blank=True,
+        verbose_name="状态",
+        help_text="状态标签，用于显示当前项目进行到哪一步")
+
+    def __init__(self, *args, **kwargs):
+        super(program, self).__init__(*args, **kwargs)
+        flag = self._meta.get_field('flag')
+        flag.choices = self.choices_to_field()
+
+    @classmethod
+    def choices_to_field(cls):
+        _choices = [BLANK_CHOICE_DASH[0], ]
+        for rel in cls._meta.related_objects:
+            object_name = rel.related_model._meta.object_name.capitalize()
+            field_name = rel.remote_field.name.capitalize()
+            name = "{}-{}".format(object_name, field_name)
+            remote_model_name = rel.related_model._meta.verbose_name
+            verbose_name = "{}-{}".format(
+                remote_model_name, rel.remote_field.verbose_name
+            )
+            _choices.append((name, verbose_name))
+        return sorted(_choices)
+
+    @property
+    def flag_to_dict(self):
+        maps = {}
+        for item in self.choices_to_field():
+            maps[item[0]] = item[1]
+        return maps
+
+    def clean_fields(self, exclude=None):
+        super(program, self).clean_fields(exclude=exclude)
+        if not self.pk:
+            verify = self._meta.model.objects.filter(
+                onidc=self.onidc, master=self.master, flag=self.flag)
+            if self.master and verify.exists():
+                raise ValidationError({
+                    'text': "标记类型: {} ,机房已经存在一个默认使用的标签: {}"
+                            " ({}).".format(self.flag_to_dict.get(self.flag),
+                                            self.text, self.description)})
+
+    def __str__(self):
+        return self.text
+
+    def title_description(self):
+        text = '{} > {}'.format(self.get_flag_display(), self.text)
+        return text
+
+    def save(self, *args, **kwargs):
+        shared_flag = ['clientkf', 'clientsales', 'goodsbrand', 'goodsunit']
+        if self.flag in shared_flag:
+            self.mark = 'shared'
+        return super(program, self).save(*args, **kwargs)
+
+    class Meta(Mark.Meta):
+        level = 2
+        icon = 'fa fa-cogs'
+        metric = "项"
+        list_display = [
+            'text', 'flag', 'description', 'master',
+            'color',
+            'actived', 'onidc', 'mark'
+        ]
+        default_permissions = ('view', 'add', 'change', 'delete', 'exports')
+        ordering = ['-actived', '-modified']
+        unique_together = (('flag', 'text'),)
+        verbose_name = verbose_name_plural = "项目管理"
+
+
+
+class OnlineManager(models.Manager):
+    def get_queryset(self):
+        return super(
+            OnlineManager,
+            self).get_queryset().filter(
+            actived=True,
+            deleted=False)
+
+
+#导入pos-----online-->up_pos
+class up_pos(program):
+
+    objects = OnlineManager()
+
+    class Meta(Mark.Meta):
+        hidden = True
+        icon = 'fa fa-server'
+        icon_color = 'green'
+        metric = "台"
+        dashboard = True
+        list_display = [
+            'name', 'rack', 'client', 'model',
+        ]
+        level = 2
+        default_permissions = ('view', 'add', 'change', 'delete', 'exports')
+        proxy = True
+        verbose_name = verbose_name_plural = "导入POS"
+
+
 
